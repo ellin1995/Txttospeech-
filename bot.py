@@ -5,12 +5,13 @@ from telebot import types
 from flask import Flask
 from gtts import gTTS
 
-TOKEN = '9002637890:AAHzUTVGa116PF4v4bHf'
+# التوكن الصحيح الخاص بك
+TOKEN = '8846303152:AAGZfWwK5C9kFL_OlIbncp5_cZ96Lb8xYWQ'
 bot = telebot.TeleBot(TOKEN)
 
 CHANNEL_USERNAME = '@txttospeechali'
 user_subscriptions = {}
-user_languages = {}  # حفظ لغة المستخدم المختارة مؤقتاً
+user_languages = {}  # لحفظ لغة المستخدم المختارة
 
 app = Flask(__name__)
 
@@ -66,7 +67,6 @@ def verify_and_process(message):
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     if verify_and_process(message):
-        # القيمة الافتراضية للغة هي العربية
         user_languages[message.from_user.id] = 'ar'
         
         markup = types.InlineKeyboardMarkup(row_width=2)
@@ -129,8 +129,6 @@ def handle_text(message):
 
     user_id = message.from_user.id
     text = message.text
-    
-    # استرجاع اللغة المختارة أو ضبط العربية كافتراضي
     lang = user_languages.get(user_id, 'ar')
     
     bot.reply_to(message, "⏳ جاري تحويل النص إلى صوت...")
