@@ -10,6 +10,7 @@ bot = telebot.TeleBot(TOKEN)
 
 CHANNEL_USERNAME = '@txttospeechali'
 user_subscriptions = {}
+user_languages = {}  # حفظ لغة المستخدم المختارة مؤقتاً
 
 app = Flask(__name__)
 
@@ -39,24 +40,23 @@ def verify_and_process(message):
         
         bot.reply_to(
             message, 
-            "عذراً، يجب عليك الاشتراك في قناتنا أولاً لتتمكن من استخدام البوت مجاناً لمدة شهر!", 
+            "عذراً، يجب عليك الاشتراك في قناتنا أولاً لتتمكن من استخدام البوت مجاناً!", 
             reply_markup=markup
         )
         return False
 
     ONE_MONTH_SECONDS = 30 * 24 * 60 * 60
-    
     if user_id not in user_subscriptions:
         user_subscriptions[user_id] = current_time + ONE_MONTH_SECONDS
     
     if current_time > user_subscriptions[user_id]:
         markup = types.InlineKeyboardMarkup()
-        buy_btn = types.InlineKeyboardButton("💳 شراء اشتراك جديد (تجديد شهر)", callback_data="buy_subscription")
+        buy_btn = types.InlineKeyboardButton("💳 شراء اشتراك جديد", callback_data="buy_subscription")
         markup.add(buy_btn)
         
         bot.reply_to(
             message, 
-            "⚠️ انتهت فترة تجربتك المجانية (الشهر الأول).\nللاستمرار في استخدام البوت، يرجى تجديد الاشتراك.", 
+            "⚠️ انتهت فترة تجربتك المجانية. يرجى تجديد الاشتراك.", 
             reply_markup=markup
         )
         return False
@@ -66,7 +66,61 @@ def verify_and_process(message):
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     if verify_and_process(message):
-        bot.reply_to(message, "أهلاً بك في بوت تحويل النصوص إلى صوت! 🎙️\nأرسل أي نص وسأقوم بتحويله لك فوراً.")
+        # القيمة الافتراضية للغة هي العربية
+        user_languages[message.from_user.id] = 'ar'
+        
+        markup = types.InlineKeyboardMarkup(row_width=2)
+        markup.add(
+            types.InlineKeyboardButton("🇸🇦 عربي", callback_data="lang_ar"),
+            types.InlineKeyboardButton("🇫🇷 فرنسي", callback_data="lang_fr"),
+            types.InlineKeyboardButton("🇺🇸 إنجليزي", callback_data="lang_en"),
+            types.InlineKeyboardButton("🇪🇸 إسباني", callback_data="lang_es"),
+            types.InlineKeyboardButton("🇮🇹 إيطالي", callback_data="lang_it"),
+            types.InlineKeyboardButton("🇩🇪 ألماني", callback_data="lang_de")
+        )
+        
+        bot.reply_to(
+            message, 
+            "أهلاً بك في بوت تحويل النصوص إلى صوت 🎙️\nاللغة الحالية: **عربي**\nاختر لغة الصوت المطلوبة أو أرسل النص مباشرة:", 
+            reply_markup=markup, 
+            parse_mode="Markdown"
+        )
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback_query(call):
+    user_id = call.from_user.id
+    
+    if call.data == "check_sub":
+        if check_subscription(user_id):
+            bot.answer_callback_query(call.id, "تم التحقق بنجاح!")
+            bot.send_message(call.id, "أهلاً بك مجدداً! أرسل أي نص لتحويله إلى صوت.")
+        else:
+            bot.answer_callback_query(call.id, "لم تقم بالاشتراك في القناة بعد!", show_alert=True)
+            
+    elif call.data == "buy_subscription":
+        bot.answer_callback_query(call.id, "تواصل مع المطور لشراء الاشتراك.")
+        bot.send_message(call.id, "لشراء الاشتراك وتجديد المدة، يرجى التواصل مع الإدارة.")
+        
+    elif call.data.startswith("lang_"):
+        lang_code = call.data.split("_")[1]
+        user_languages[user_id] = lang_code
+        
+        lang_names = {
+            'ar': 'العربية 🇸🇦',
+            'fr': 'الفرنسية 🇫🇷',
+            'en': 'الإنجليزية 🇺🇸',
+            'es': 'الإسبانية 🇪🇸',
+            'it': 'الإيطالية 🇮🇹',
+            'de': 'الألمانية 🇩🇪'
+        }
+        
+        bot.answer_callback_query(call.id, f"تم تغيير اللغة إلى: {lang_names.get(lang_code, lang_code)}")
+        bot.edit_message_text(
+            f"✅ تم تحديث اللغة بنجاح إلى: **{lang_names.get(lang_code, lang_code)}**\n\nالآن أرسل النص الذي تريد تحويله إلى صوت:",
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            parse_mode="Markdown"
+        )
 
 @bot.message_handler(func=lambda message: True)
 def handle_text(message):
@@ -75,10 +129,14 @@ def handle_text(message):
 
     user_id = message.from_user.id
     text = message.text
+    
+    # استرجاع اللغة المختارة أو ضبط العربية كافتراضي
+    lang = user_languages.get(user_id, 'ar')
+    
     bot.reply_to(message, "⏳ جاري تحويل النص إلى صوت...")
     
     try:
-        tts = gTTS(text=text, lang='ar')
+        tts = gTTS(text=text, lang=lang)
         audio_path = f"voice_{user_id}.mp3"
         tts.save(audio_path)
         
@@ -88,20 +146,6 @@ def handle_text(message):
         os.remove(audio_path)
     except Exception as e:
         bot.reply_to(message, f"حدث خطأ أثناء التوليد: {e}")
-
-@bot.callback_query_handler(func=lambda call: True)
-def callback_query(call):
-    user_id = call.from_user.id
-    if call.data == "check_sub":
-        if check_subscription(user_id):
-            bot.answer_callback_query(call.id, "تم التحقق بنجاح! يمكنك استخدام البوت الآن.")
-            bot.send_message(call.id, "أهلاً بك مجدداً! أرسل أي نص لتحويله إلى صوت.")
-        else:
-            bot.answer_callback_query(call.id, "لم تقم بالاشتراك في القناة بعد!", show_alert=True)
-            
-    elif call.data == "buy_subscription":
-        bot.answer_callback_query(call.id, "تواصل مع المطور لشراء الاشتراك.")
-        bot.send_message(call.id, "لشراء الاشتراك وتجديد المدة، يرجى التواصل مع الإدارة.")
 
 if __name__ == "__main__":
     import threading
