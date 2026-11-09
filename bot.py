@@ -5,8 +5,8 @@ from telebot import types
 from flask import Flask
 from gtts import gTTS
 
-# التوكن الصحيح الخاص بك
-TOKEN = '8846303152:AAGZfWwK5C9kFL_OlIbncp5_cZ96Lb8xYWQ'
+# التوكن الجديد الصحيح الخاص بك
+TOKEN = '8846303152:AAGttWeFjw8uZoe5dU77x80C8f55n3AMR0s'
 bot = telebot.TeleBot(TOKEN)
 
 CHANNEL_USERNAME = '@txttospeechali'
