@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>شاهد إعلاناً لتفعيل البوت</title>
+  <!-- Adsgram SDK -->
+  <script src="https://sad.adsgram.ai/js/sad.js"></script>
+  <!-- Telegram Web App SDK (اختياري لتحسين التجربة داخل تيليجرام) -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 20px;
+      padding: 30px 24px;
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .icon-container {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #238636, #2ea043);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      box-shadow: 0 4px 15px rgba(46, 160, 67, 0.4);
+    }
+
+    .icon-container svg {
+      width: 42px;
+      height: 42px;
+      fill: #ffffff;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin-bottom: 12px;
+      font-weight: 700;
+      color: #f0f6fc;
+    }
+
+    p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #8b949e;
+      margin-bottom: 25px;
+    }
+
+    .status-box {
+      background: #21262d;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 25px;
+      font-size: 13px;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+      display: none;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 15px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+      background: linear-gradient(135deg, #1f6feb, #238636);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(31, 111, 235, 0.3);
+    }
+
+    .btn:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      background: #30363d;
+      color: #8b949e;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .footer {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #6e7681;
+    }
+
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.2);
+      border-top: 3px solid #ffffff;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="icon-container">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+      </svg>
+    </div>
+
+    <h1>تفعيل رصيد تحويل النص لصوت</h1>
+    <p>
+      شاهد إعلاناً سريعاً لدعم البوت وتفعيل رصيدك المجاني لتحويل النصوص إلى صوت فوراً.
+    </p>
+
+    <div id="statusBox" class="status-box"></div>
+
+    <button id="showAdBtn" class="btn" onclick="triggerAd()">
+      <span>📺 مشاهدة الإعلان للحصول على الرصيد</span>
+    </button>
+
+    <div class="footer">
+      سيتم تحويلك تلقائياً للبوت بعد اكتمال مشاهدة الإعلان بنجاح.
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // ⚙️ الإعدادات (قم بالتعديل هنا):
+    // ==========================================
+    // 1. معرف الكتلة الإعلانية من Adsgram
+    const ADSGRAM_BLOCK_ID = "YOUR_BLOCK_ID"; // ضع هنا رقم الـ Block ID الخاص بك من Adsgram
+
+    // 2. يوزرنيم بوت التيليجرام الخاص بك (بدون @)
+    const TELEGRAM_BOT_USERNAME = "YOUR_BOT_USERNAME"; // مثال: "MyTtsBot"
+    // ==========================================
+
+    const showAdBtn = document.getElementById("showAdBtn");
+    const statusBox = document.getElementById("statusBox");
+
+    function setStatus(message, isError = false) {
+      statusBox.style.display = "block";
+      statusBox.innerText = message;
+      statusBox.style.color = isError ? "#f85149" : "#3fb950";
+      statusBox.style.borderColor = isError ? "#f85149" : "#238636";
+    }
+
+    function redirectBackToBot() {
+      setStatus("🎉 تم إتمام الإعلان بنجاح! جاري تحويلك إلى البوت...");
+      const redirectUrl = `https://t.me/${TELEGRAM_BOT_USERNAME}?start=reward`;
+      
+      // محاولة الإغلاق بالـ WebApp إن كان متاحاً أو التحويل المباشر
+      if (window.Telegram && window.Telegram.WebApp) {
+        window.Telegram.WebApp.openTelegramLink(redirectUrl);
+      } else {
+        window.location.href = redirectUrl;
+      }
+    }
+
+    function triggerAd() {
+      if (typeof window.Adsgram === "undefined") {
+        setStatus("⚠️ تعذر تحميل سكربت الإعلانات. تأكد من إيقاف مانع الإعلانات (AdBlock).", true);
+        return;
+      }
+
+      if (ADSGRAM_BLOCK_ID === "YOUR_BLOCK_ID") {
+        setStatus("⚠️ تنبيه للمطور: يرجى وضع Adsgram Block ID الحقيقي في ملف index.html", true);
+        return;
+      }
+
+      showAdBtn.disabled = true;
+      showAdBtn.innerHTML = '<span class="spinner"></span><span>جاري تحميل الإعلان...</span>';
+
+      try {
+        const AdController = window.Adsgram.init({
+          blockId: ADSGRAM_BLOCK_ID
+        });
+
+        AdController.show()
+          .then((result) => {
+            // المستخدم أتم مشاهدة الإعلان
+            if (result && result.done) {
+              redirectBackToBot();
+            } else {
+              showAdBtn.disabled = false;
+              showAdBtn.innerHTML = '<span>📺 إعادة المحاولة</span>';
+              setStatus("لم تكتمل مشاهدة الإعلان. يرجى المشاهدة حتى النهاية للحصول على المكافأة.", true);
+            }
+          })
+          .catch((error) => {
+            console.error("Ad error:", error);
+            showAdBtn.disabled = false;
+            showAdBtn.innerHTML = '<span>📺 إعادة المحاولة</span>';
+            setStatus("حدث خطأ أثناء عرض الإعلان أو لم يتوفر إعلان حالياً. حاول ثانية لاحقاً.", true);
+          });
+      } catch (err) {
+        console.error("Init error:", err);
+        showAdBtn.disabled = false;
+        showAdBtn.innerHTML = '<span>📺 إعادة المحاولة</span>';
+        setStatus("حدث خطأ أثناء تهيئة الإعلان.", true);
+      }
+    }
+  </script>
+</body>
+</html>
